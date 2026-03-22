@@ -404,9 +404,22 @@ export function GymPlotWithHandles({ hideHandles = false }: { hideHandles?: bool
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [api, dayoffset]);
 
+    // Check if gym is empty (utilization below threshold)
+    const currentUtil = gym?.data_today && gym.data_today.length > 0
+        ? gym.data_today[gym.data_today.length - 1].auslastung
+        : null;
+    const isGymEmpty = currentUtil !== null && currentUtil < 25;
+
     return (
         <>
             {error && <div className="alert alert-danger">{error}</div>}
+            {isGymEmpty && (
+                <div className="alert alert-success d-flex align-items-center mb-3">
+                    <span className="me-2">🎉</span>
+                    <strong>Gym is nearly empty!</strong>
+                    <span className="ms-2">Current: {currentUtil?.toFixed(0)}% - This is a great time to go!</span>
+                </div>
+            )}
             {gym && gymLine && <LiveStatusCard gym={gym} gymLine={gymLine} />}
             <div style={{ height: "500px" }}>
                 {gym && gymLine && <ChartImpl gym={gym} gymLine={gymLine} />}
