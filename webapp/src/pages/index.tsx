@@ -194,7 +194,39 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                 </div>
             )}
             <div className="card-body py-2">
-                <div className="row text-center">
+                <div className="row text-center small">
+                    {gymLine.interpLine && (() => {
+                        const now = new Date();
+                        const slots = [
+                            { label: "Now", hour: now.getHours(), min: now.getMinutes() },
+                            { label: "1h", hour: (now.getHours() + 1) % 24 },
+                            { label: "2h", hour: (now.getHours() + 2) % 24 },
+                        ];
+                        return (
+                            <div className="d-flex justify-content-around mb-2 pb-2 border-bottom border-secondary">
+                                {slots.map((slot, i) => {
+                                    const targetTime = new Date(now.getTime() + i * 3600000);
+                                    const targetHour = targetTime.getHours();
+                                    // Find closest prediction point
+                                    let closest = gymLine.interpLine[0];
+                                    let minDiff = 24;
+                                    for (const p of gymLine.interpLine) {
+                                        const pHour = new Date(p.created_at).getHours();
+                                        const diff = Math.abs(pHour - targetHour);
+                                        if (diff < minDiff) { minDiff = diff; closest = p; }
+                                    }
+                                    const pred = closest?.auslastung || 0;
+                                    const color = pred < 40 ? "text-success" : pred < 60 ? "text-warning" : "text-danger";
+                                    return (
+                                        <div key={slot.label} className="text-center">
+                                            <div className="text-muted">{slot.label}</div>
+                                            <div className={`fw-bold ${color}`}>{pred.toFixed(0)}%</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                     <div className="col-3">
                         <h6 className="text-muted mb-1">Now {mood}</h6>
                         <h4 className={status?.color + " mb-0"}>{currentUtil.toFixed(0)}%</h4>
