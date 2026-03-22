@@ -177,6 +177,17 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                 {gymLine?.interpLine && (
                     <div className="mt-2 pt-2 border-top border-secondary">
                         <small className="text-muted">
+                            {(() => {
+                                if (!gymLine.interpLine || gymLine.interpLine.length === 0) return null;
+                                const now = new Date();
+                                const currentHour = now.getHours();
+                                // Check if we're approaching typical peak (5-7pm = 17-19)
+                                const approachingPeak = currentHour >= 16 && currentHour < 17 && currentUtil !== null && currentUtil > 50;
+                                if (approachingPeak) {
+                                    return <span className="text-warning"><span className="me-1">⚠️</span>Peak hour approaching (5-7 PM)!</span>;
+                                }
+                                return null;
+                            })()}
                             <span className="me-1">💡</span>
                             Best time in next 3h:{" "}
                             <span className="text-success fw-bold">
