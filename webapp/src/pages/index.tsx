@@ -8,9 +8,49 @@ import { EMBED_CODE } from "./embed_gym";
 const ReactApexChart = React.lazy(() => import("react-apexcharts"));
 
 function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterpLineResponse }) {
+    // Get current utilization from latest data point
     const currentUtil =
         gym.data_today.length > 0 ? gym.data_today[gym.data_today.length - 1].auslastung : null;
 
+    // Get current hour for week-over-week comparison
+    const getCurrentHour = () => {
+        if (gym.data_today.length === 0) return null;
+        return new Date(gym.data_today[gym.data_today.length - 1].created_at).getHours();
+    };
+    const currentHour = getCurrentHour();
+
+    // Get utilization from same time last week (data_historic[0] is 1 week ago)
+    const getLastWeekUtil = () => {
+        if (
+            !gym.data_historic ||
+            gym.data_historic.length === 0 ||
+            gym.data_historic[0].length === 0 ||
+            currentHour === null
+        )
+            return null;
+        const lastWeek = gym.data_historic[0];
+        // Find closest time slot by hour
+        let closest = lastWeek[0];
+        let minDiff = 24;
+        for (const point of lastWeek) {
+            const diff = Math.abs(new Date(point.created_at).getHours() - currentHour);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = point;
+            }
+        }
+        return closest.auslastung;
+    };
+    const lastWeekUtil = getLastWeekUtil();
+
+    // Calculate week-over-week change
+    const getWowChange = () => {
+        if (currentUtil === null || lastWeekUtil === null || lastWeekUtil === 0) return null;
+        return ((currentUtil - lastWeekUtil) / lastWeekUtil) * 100;
+    };
+    const wowChange = getWowChange();
+
+    // Calculate trend from last 3 data points
     const getTrend = () => {
         if (gym.data_today.length < 3) return null;
         const recent = gym.data_today.slice(-3);
@@ -22,6 +62,7 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
     };
     const trend = getTrend();
 
+    // Get prediction for next hour from interpLine
     const getNextHourPrediction = () => {
         if (!gymLine.interpLine || gymLine.interpLine.length === 0) return null;
         const now = new Date();
@@ -39,6 +80,7 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
     };
     const nextHourPred = getNextHourPrediction();
 
+    // Get status label and color
     const getStatus = (util: number) => {
         if (util < 30) return { label: "Empty", color: "text-success" };
         if (util < 60) return { label: "Moderate", color: "text-warning" };
@@ -51,18 +93,42 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
         trend === "rising" ? "text-danger" : trend === "falling" ? "text-success" : "text-muted";
     const status = currentUtil !== null ? getStatus(currentUtil) : null;
 
+    // Week-over-week colors and formatting
+    const wowColor =
+        wowChange === null
+            ? "text-muted"
+            : wowChange > 5
+              ? "text-danger"
+              : wowChange < -5
+                ? "text-success"
+                : "text-muted";
+    const wowIcon = wowChange === null ? "" : wowChange > 0 ? "↗" : wowChange < 0 ? "↘" : "→";
+    const wowText =
+        wowChange === null ? "—" : (wowChange > 0 ? "+" : "") + wowChange.toFixed(0) + "%";
+
     if (currentUtil === null) return null;
 
     return (
         <div className="card bg-dark shadow-lg mb-3">
             <div className="card-body py-2">
                 <div className="row text-center">
-                    <div className="col-4">
+                    <div className="col-3">
                         <h6 className="text-muted mb-1">Now</h6>
                         <h4 className={status?.color + " mb-0"}>{currentUtil.toFixed(0)}%</h4>
                         <small className="text-muted">{status?.label}</small>
                     </div>
-                    <div className="col-4">
+                    <div className="col-3">
+                        <h6 className="text-muted mb-1">Vs Last Week</h6>
+                        <h4 className={wowColor + " mb-0"}>
+                            {wowIcon} {wowText}
+                        </h4>
+                        <small className="text-muted">
+                            {lastWeekUtil !== null
+                                ? lastWeekUtil.toFixed(0) + "% last wk"
+                                : "no data"}
+                        </small>
+                    </div>
+                    <div className="col-3">
                         <h6 className="text-muted mb-1">Trend</h6>
                         <h4 className={trendColor + " mb-0"}>
                             {trendIcon}{" "}
@@ -73,7 +139,7 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                                   : "Stable"}
                         </h4>
                     </div>
-                    <div className="col-4">
+                    <div className="col-3">
                         <h6 className="text-muted mb-1"> 预测 1h</h6>
                         <h4 className={getStatus(nextHourPred || 0).color + " mb-0"}>
                             {nextHourPred !== null ? nextHourPred.toFixed(0) + "%" : "—"}
