@@ -100,6 +100,24 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
     // Check for "Gym Jackpot" - gym is almost empty!
     const isJackpot = currentUtil !== null && currentUtil < 15;
 
+    // Data freshness - how old is the latest data point?
+    const getDataAge = () => {
+        if (!gym?.data_today || gym.data_today.length === 0) return null;
+        const latestTime = new Date(gym.data_today[gym.data_today.length - 1].created_at);
+        const now = new Date();
+        const ageMs = now.getTime() - latestTime.getTime();
+        const ageMins = Math.floor(ageMs / 60000);
+        return ageMins;
+    };
+    const dataAge = getDataAge();
+
+    // All-time high comparison
+    const getAllTimeHigh = () => {
+        if (!gym?.data_today || gym.data_today.length === 0) return null;
+        return Math.max(...gym.data_today.map(d => d.auslastung));
+    };
+    const todayHigh = getAllTimeHigh();
+
     const mood = currentUtil !== null ? getMood(currentUtil) : null;
 
     const trendIcon = trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→";
@@ -176,6 +194,18 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                 </div>
                 {gymLine?.interpLine && (
                     <div className="mt-2 pt-2 border-top border-secondary">
+                        {dataAge !== null && (
+                            <div className="d-flex justify-content-between small">
+                                <span className="text-muted">
+                                    {dataAge < 5 ? "🟢" : dataAge < 15 ? "🟡" : "🔴"} Data: {dataAge} min ago
+                                </span>
+                                {todayHigh !== null && gymLine.allTimeHigh !== undefined && (
+                                    <span className="text-muted">
+                                        {todayHigh >= gymLine.allTimeHigh ? "🏆 Today's High!" : `🏃 High: ${gymLine.allTimeHigh}%`}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         <small className="text-muted">
                             {(() => {
                                 if (!gymLine.interpLine || gymLine.interpLine.length === 0) return null;
