@@ -97,6 +97,9 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
         return "😱";  // Very busy - panicked
     };
 
+    // Check for "Gym Jackpot" - gym is almost empty!
+    const isJackpot = currentUtil !== null && currentUtil < 15;
+
     const mood = currentUtil !== null ? getMood(currentUtil) : null;
 
     const trendIcon = trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→";
@@ -441,9 +444,22 @@ export function GymPlotWithHandles({ hideHandles = false }: { hideHandles?: bool
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [api, dayoffset]);
 
+    // Check for jackpot - gym is almost empty!
+    const currentUtil = gym?.data_today && gym.data_today.length > 0
+        ? gym.data_today[gym.data_today.length - 1].auslastung
+        : null;
+    const isJackpot = currentUtil !== null && currentUtil < 15;
+
     return (
         <>
             {error && <div className="alert alert-danger">{error}</div>}
+            {isJackpot && (
+                <div className="alert alert-warning d-flex align-items-center mb-3 animate__animated animate__bounce">
+                    <span className="me-2">🎰</span>
+                    <strong>JACKPOT!</strong>
+                    <span className="ms-2">Gym is only {currentUtil?.toFixed(0)}% full right now! You're here at the perfect time!</span>
+                </div>
+            )}
             {gym && gymLine && <LiveStatusCard gym={gym} gymLine={gymLine} />}
             <div style={{ height: "500px" }}>
                 {gym && gymLine && <ChartImpl gym={gym} gymLine={gymLine} />}
