@@ -154,8 +154,45 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
 
     if (currentUtil === null) return null;
 
+    // Simple Go / Wait indicator
+    const getGoWait = () => {
+        if (currentUtil === null || nextHourPred === null) return null;
+        // If current is low (<40%) and not getting much worse, GO
+        if (currentUtil < 40 && nextHourPred <= currentUtil + 10) {
+            return { decision: "GO", emoji: "🏃", color: "success", text: "Perfect time to go!" };
+        }
+        // If current is moderate, check if it will get better or worse
+        if (currentUtil < 55 && nextHourPred < currentUtil - 5) {
+            return { decision: "GO", emoji: "🏃", color: "success", text: "Getting quieter!" };
+        }
+        if (currentUtil >= 55 || nextHourPred > 70) {
+            // Find when it might drop below 50%
+            if (gymLine.interpLine && gymLine.interpLine.length > 0) {
+                const now = new Date();
+                for (const point of gymLine.interpLine) {
+                    const ptTime = new Date(point.created_at);
+                    if (ptTime > now && point.auslastung < 50) {
+                        const waitMins = Math.round((ptTime.getTime() - now.getTime()) / 60000);
+                        if (waitMins <= 60) {
+                            return { decision: "WAIT", emoji: "⏰", color: "warning", text: `${waitMins} min until < 50%` };
+                        }
+                    }
+                }
+            }
+            return { decision: "WAIT", emoji: "⏰", color: "warning", text: "Gym is busy right now" };
+        }
+        return { decision: "GO", emoji: "🏃", color: "success", text: "Conditions look good!" };
+    };
+    const goWait = getGoWait();
+
     return (
         <div className="card bg-dark shadow-lg mb-3">
+            {goWait && (
+                <div className={`card-header bg-${goWait.color} text-white d-flex align-items-center justify-content-center py-2`}>
+                    <span className="me-2" style={{ fontSize: "1.5rem" }}>{goWait.emoji}</span>
+                    <span className="h4 mb-0">{goWait.decision} - {goWait.text}</span>
+                </div>
+            )}
             <div className="card-body py-2">
                 <div className="row text-center">
                     <div className="col-3">
