@@ -162,6 +162,17 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                             {nextHourPred !== null ? getStatus(nextHourPred).label : ""}
                         </small>
                     </div>
+                    <div className="col-3">
+                        <h6 className="text-muted mb-1">Get busier?</h6>
+                        {(() => {
+                            if (currentUtil === null || nextHourPred === null) return <h4 className="text-muted mb-0">—</h4>;
+                            const willGetBusier = nextHourPred > currentUtil + 5;
+                            const willGetQuieter = nextHourPred < currentUtil - 5;
+                            if (willGetBusier) return <h4 className="text-danger mb-0">📈 Yes ↑</h4>;
+                            if (willGetQuieter) return <h4 className="text-success mb-0">📉 No ↓</h4>;
+                            return <h4 className="text-muted mb-0">➖ Same</h4>;
+                        })()}
+                    </div>
                 </div>
                 {gymLine?.interpLine && (
                     <div className="mt-2 pt-2 border-top border-secondary">
