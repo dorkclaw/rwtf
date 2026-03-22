@@ -149,6 +149,32 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
                         </small>
                     </div>
                 </div>
+                {gymLine?.interpLine && (
+                    <div className="mt-2 pt-2 border-top border-secondary">
+                        <small className="text-muted">
+                            <span className="me-1">💡</span>
+                            Best time in next 3h:{" "}
+                            <span className="text-success fw-bold">
+                                {(() => {
+                                    if (!gymLine.interpLine || gymLine.interpLine.length === 0) return "—";
+                                    const now = new Date();
+                                    const threeHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+                                    // Filter points within next 3 hours
+                                    const upcomingPoints = gymLine.interpLine.filter(p => {
+                                        const ptTime = new Date(p.created_at);
+                                        return ptTime >= now && ptTime <= threeHoursLater;
+                                    });
+                                    if (upcomingPoints.length === 0) return "—";
+                                    // Find the point with lowest utilization
+                                    const best = upcomingPoints.reduce((min, p) =>
+                                        p.auslastung < min.auslastung ? p : min, upcomingPoints[0]);
+                                    const bestTime = new Date(best.created_at);
+                                    return `${bestTime.getHours()}:00 (${best.auslastung.toFixed(0)}%)`;
+                                })()}
+                            </span>
+                        </small>
+                    </div>
+                )}
             </div>
         </div>
     );
