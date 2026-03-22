@@ -88,6 +88,17 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
         return { label: "Very Busy", color: "text-danger" };
     };
 
+    // Gym mood based on utilization
+    const getMood = (util: number) => {
+        if (util < 20) return "😌";  // Super empty - relaxed
+        if (util < 40) return "🙂";  // Empty - good mood
+        if (util < 60) return "😐";  // Moderate - neutral
+        if (util < 80) return "😰";  // Busy - stressed
+        return "😱";  // Very busy - panicked
+    };
+
+    const mood = currentUtil !== null ? getMood(currentUtil) : null;
+
     const trendIcon = trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→";
     const trendColor =
         trend === "rising" ? "text-danger" : trend === "falling" ? "text-success" : "text-muted";
@@ -113,7 +124,7 @@ function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterp
             <div className="card-body py-2">
                 <div className="row text-center">
                     <div className="col-3">
-                        <h6 className="text-muted mb-1">Now</h6>
+                        <h6 className="text-muted mb-1">Now {mood}</h6>
                         <h4 className={status?.color + " mb-0"}>{currentUtil.toFixed(0)}%</h4>
                         <small className="text-muted">{status?.label}</small>
                     </div>
