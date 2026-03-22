@@ -7,6 +7,87 @@ import { EMBED_CODE } from "./embed_gym";
 
 const ReactApexChart = React.lazy(() => import("react-apexcharts"));
 
+function LiveStatusCard({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterpLineResponse }) {
+    const currentUtil =
+        gym.data_today.length > 0 ? gym.data_today[gym.data_today.length - 1].auslastung : null;
+
+    const getTrend = () => {
+        if (gym.data_today.length < 3) return null;
+        const recent = gym.data_today.slice(-3);
+        const first = recent[0].auslastung;
+        const last = recent[recent.length - 1].auslastung;
+        const diff = last - first;
+        if (Math.abs(diff) < 5) return "stable";
+        return diff > 0 ? "rising" : "falling";
+    };
+    const trend = getTrend();
+
+    const getNextHourPrediction = () => {
+        if (!gymLine.interpLine || gymLine.interpLine.length === 0) return null;
+        const now = new Date();
+        const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+        let closest = gymLine.interpLine[0];
+        let minDiff = Math.abs(new Date(closest.created_at).getTime() - oneHourLater.getTime());
+        for (const point of gymLine.interpLine) {
+            const diff = Math.abs(new Date(point.created_at).getTime() - oneHourLater.getTime());
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = point;
+            }
+        }
+        return closest.auslastung;
+    };
+    const nextHourPred = getNextHourPrediction();
+
+    const getStatus = (util: number) => {
+        if (util < 30) return { label: "Empty", color: "text-success" };
+        if (util < 60) return { label: "Moderate", color: "text-warning" };
+        if (util < 80) return { label: "Busy", color: "text-warning" };
+        return { label: "Very Busy", color: "text-danger" };
+    };
+
+    const trendIcon = trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→";
+    const trendColor =
+        trend === "rising" ? "text-danger" : trend === "falling" ? "text-success" : "text-muted";
+    const status = currentUtil !== null ? getStatus(currentUtil) : null;
+
+    if (currentUtil === null) return null;
+
+    return (
+        <div className="card bg-dark shadow-lg mb-3">
+            <div className="card-body py-2">
+                <div className="row text-center">
+                    <div className="col-4">
+                        <h6 className="text-muted mb-1">Now</h6>
+                        <h4 className={status?.color + " mb-0"}>{currentUtil.toFixed(0)}%</h4>
+                        <small className="text-muted">{status?.label}</small>
+                    </div>
+                    <div className="col-4">
+                        <h6 className="text-muted mb-1">Trend</h6>
+                        <h4 className={trendColor + " mb-0"}>
+                            {trendIcon}{" "}
+                            {trend === "rising"
+                                ? "Rising"
+                                : trend === "falling"
+                                  ? "Falling"
+                                  : "Stable"}
+                        </h4>
+                    </div>
+                    <div className="col-4">
+                        <h6 className="text-muted mb-1"> 预测 1h</h6>
+                        <h4 className={getStatus(nextHourPred || 0).color + " mb-0"}>
+                            {nextHourPred !== null ? nextHourPred.toFixed(0) + "%" : "—"}
+                        </h4>
+                        <small className="text-muted">
+                            {nextHourPred !== null ? getStatus(nextHourPred).label : ""}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function ChartImpl({ gym, gymLine }: { gym: GymResponse; gymLine: GymInterpLineResponse }) {
     let todayReference;
     if (gym.data_today.length > 0) {
@@ -260,6 +341,7 @@ export function GymPlotWithHandles({ hideHandles = false }: { hideHandles?: bool
     return (
         <>
             {error && <div className="alert alert-danger">{error}</div>}
+            {gym && gymLine && <LiveStatusCard gym={gym} gymLine={gymLine} />}
             <div style={{ height: "500px" }}>
                 {gym && gymLine && <ChartImpl gym={gym} gymLine={gymLine} />}
             </div>
@@ -361,7 +443,10 @@ function GymStuff() {
                                 <strong>Prediction</strong>:
                             </dt>
                             <dd>
-                                Prediction of the number of people in the gym for the remainder of the day, based on historical data and the current trend. Prediction for the current day becomes more accurate as the day progresses and more data points are available.
+                                Prediction of the number of people in the gym for the remainder of
+                                the day, based on historical data and the current trend. Prediction
+                                for the current day becomes more accurate as the day progresses and
+                                more data points are available.
                             </dd>
                             <dt>
                                 <strong>Historic Arrival</strong>:
